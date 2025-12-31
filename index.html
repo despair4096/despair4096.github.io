@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CBSE Class 12 Notes</title>
-    <meta name="description" content="These are my course lecture notes for Physics and Chemistry merged and sorted into one place :) Feel free to use or download">
+    <meta name="description" content="These are my course lecture notes for Physics and Chemistry scraped, merged and sorted into one place :) Feel free to use or download">
     <meta property="og:title" content="CBSE Class 12 Notes">
-    <meta property="og:description" content="These are my course lecture notes for Physics and Chemistry merged and sorted into one place :) Feel free to use or download">
+    <meta property="og:description" content="These are my course lecture notes for Physics and Chemistry scraped, merged and sorted into one place :) Feel free to use or download">
     <meta property="og:image" content="https://avatars.githubusercontent.com/u/168528236?v=4">
     <meta property="og:url" content="https://despair4096.github.io">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="CBSE Class 12 Notes">
-    <meta name="twitter:description" content="These are my course lecture notes for Physics and Chemistry merged and sorted into one place :) Feel free to use or download">
+    <meta name="twitter:description" content="These are my course lecture notes for Physics and Chemistry scraped, merged and sorted into one place :) Feel free to use or download">
     <meta name="twitter:image" content="https://avatars.githubusercontent.com/u/168528236?v=4">
     <meta name="theme-color" content="#0d0d12">
     <style>
@@ -367,6 +367,55 @@
             to { transform: rotate(360deg); }
         }
 
+        .click-zone {
+            position: fixed;
+            top: 60px;
+            bottom: 50px;
+            width: 25%;
+            z-index: 99;
+            cursor: pointer;
+            display: none;
+        }
+
+        .reader.active .click-zone {
+            display: block;
+        }
+
+        .click-zone.left {
+            left: 0;
+        }
+
+        .click-zone.right {
+            right: 0;
+        }
+
+        .click-zone:active {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .click-zone-icon {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5rem;
+            color: rgba(255,255,255,0.2);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .click-zone:active .click-zone-icon {
+            opacity: 1;
+        }
+
+        .click-zone.left .click-zone-icon {
+            left: 15px;
+        }
+
+        .click-zone.right .click-zone-icon {
+            right: 15px;
+        }
+
         @media (min-width: 600px) {
             .grid {
                 display: grid;
@@ -375,6 +424,14 @@
 
             .page-wrap {
                 max-width: 700px;
+            }
+
+            .click-zone {
+                width: 20%;
+            }
+
+            .click-zone-icon {
+                font-size: 2rem;
             }
         }
     </style>
@@ -409,6 +466,8 @@
     </div>
 
     <div class="reader" id="reader">
+        <div class="click-zone left" onclick="go(-1)"><span class="click-zone-icon">◀</span></div>
+        <div class="click-zone right" onclick="go(1)"><span class="click-zone-icon">▶</span></div>
         <div class="reader-head">
             <span class="reader-title" id="rTitle">Chapter</span>
             <div class="nav-btns">
