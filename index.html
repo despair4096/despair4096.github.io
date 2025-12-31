@@ -29,6 +29,18 @@
             min-height: 100vh;
         }
 
+        body.reader-open {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        html.reader-open {
+            overflow: hidden;
+        }
+
         .header {
             display: flex;
             align-items: center;
@@ -213,6 +225,7 @@
             background: #0d0d12;
             z-index: 100;
             flex-direction: column;
+            overscroll-behavior: contain;
         }
 
         .reader.active {
@@ -299,6 +312,8 @@
             overflow-x: hidden;
             padding: 10px;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            touch-action: pan-y;
         }
 
         .page-wrap {
@@ -478,7 +493,7 @@
                 </div>
                 <button class="nav-btn" onclick="go(1)">▶</button>
                 <button class="nav-btn dl" onclick="dl()">↓</button>
-                <button class="nav-btn close" onclick="close_()">✕</button>
+                <button class="nav-btn close" onclick="closeWithHistory()">✕</button>
             </div>
         </div>
         <div class="reader-body" id="rBody"></div>
@@ -593,9 +608,11 @@
                     document.getElementById('prog').style.width = '0%';
                     renderPages();
                     document.getElementById('reader').classList.add('active');
-                    document.body.style.overflow = 'hidden';
+                    document.body.classList.add('reader-open');
+                    document.documentElement.classList.add('reader-open');
                     document.getElementById('rBody').scrollTop = 0;
                     document.getElementById('loader').classList.remove('active');
+                    history.pushState({ reader: true }, '');
                 });
         }
 
@@ -642,13 +659,26 @@
 
         function close_() {
             document.getElementById('reader').classList.remove('active');
-            document.body.style.overflow = '';
+            document.body.classList.remove('reader-open');
+            document.documentElement.classList.remove('reader-open');
         }
+
+        function closeWithHistory() {
+            if (document.getElementById('reader').classList.contains('active')) {
+                history.back();
+            }
+        }
+
+        window.addEventListener('popstate', function(e) {
+            if (document.getElementById('reader').classList.contains('active')) {
+                close_();
+            }
+        });
 
         document.addEventListener('keydown', function(e) {
             if (!document.getElementById('reader').classList.contains('active')) return;
             if (document.activeElement.tagName === 'INPUT') return;
-            if (e.key === 'Escape') close_();
+            if (e.key === 'Escape') closeWithHistory();
             if (e.key === 'ArrowLeft') go(-1);
             if (e.key === 'ArrowRight') go(1);
         });
