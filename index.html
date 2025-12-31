@@ -410,6 +410,8 @@
             width: 100%;
             height: auto;
             display: block;
+            aspect-ratio: 16 / 9;
+            background: #252530;
         }
 
         .page-num {
@@ -603,6 +605,7 @@
         var ZOOM_MIN = 50, ZOOM_MAX = 300, ZOOM_STEP = 25;
         var userHasScrolled = false;
         var initialPage = 1;
+        var isRestoring = false;
 
         // LocalStorage helpers
         function getProgress() {
@@ -779,11 +782,16 @@
                     document.getElementById('reader').classList.add('active');
                     document.body.classList.add('reader-open');
                     document.documentElement.classList.add('reader-open');
-                    // Scroll to saved page
-                    setTimeout(function() {
-                        var el = document.getElementById('p' + page);
-                        if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
-                    }, 100);
+                    // Scroll to saved page (aspect-ratio reserves space, so we can scroll immediately)
+                    if (page > 1) {
+                        isRestoring = true;
+                        setTimeout(function() {
+                            var el = document.getElementById('p' + page);
+                            if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+                            // Clear restoring flag after scroll completes
+                            setTimeout(function() { isRestoring = false; }, 200);
+                        }, 50);
+                    }
                     document.getElementById('loader').classList.remove('active');
                     history.pushState({ reader: true }, '');
                 });
@@ -803,6 +811,9 @@
             applyZoom();
 
             body.onscroll = function() {
+                // Skip tracking during restore
+                if (isRestoring) return;
+                
                 var pct = (body.scrollTop / (body.scrollHeight - body.clientHeight)) * 100;
                 document.getElementById('prog').style.width = Math.min(100, Math.max(0, pct || 0)) + '%';
 
@@ -814,13 +825,8 @@
                         if (n !== page) {
                             page = n;
                             document.getElementById('pInp').value = n;
-                            // Only save if user has scrolled away from initial position
-                            if (n !== initialPage) {
-                                userHasScrolled = true;
-                            }
-                            if (userHasScrolled) {
-                                saveProgress(subj, folder, page, total);
-                            }
+                            userHasScrolled = true;
+                            saveProgress(subj, folder, page, total);
                         }
                         break;
                     }
