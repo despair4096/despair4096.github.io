@@ -219,9 +219,42 @@
             line-height: 1.3;
         }
 
+        .chapter-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
         .chapter-pages {
             font-size: 0.8rem;
             color: var(--text-secondary);
+        }
+
+        .download-btn {
+            background: rgba(59, 130, 246, 0.15);
+            border: none;
+            color: var(--accent-physics);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .chemistry .download-btn {
+            background: rgba(244, 63, 94, 0.15);
+            color: var(--accent-chemistry);
+        }
+
+        .download-btn:hover {
+            background: var(--accent-physics);
+            color: #fff;
+        }
+
+        .chemistry .download-btn:hover {
+            background: var(--accent-chemistry);
         }
 
         .reader {
@@ -292,6 +325,13 @@
             background: var(--accent-chemistry);
             border-color: transparent;
             color: #fff;
+        }
+
+        .ctrl-btn.download {
+            background: var(--accent-physics);
+            border-color: transparent;
+            color: #fff;
+            font-size: 0.85rem;
         }
 
         .page-indicator {
@@ -461,6 +501,27 @@
             z-index: 1002;
         }
 
+        .cache-status {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s;
+            z-index: 1003;
+        }
+
+        .cache-status.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         @media (max-width: 640px) {
             .header {
                 padding: 16px 12px 4px;
@@ -616,6 +677,7 @@
                     <button class="ctrl-btn" onclick="zoom(-0.1)" title="Zoom Out">−</button>
                     <button class="ctrl-btn" onclick="zoom(0.1)" title="Zoom In">+</button>
                 </div>
+                <button class="ctrl-btn download" onclick="downloadPdf()" title="Download PDF">↓</button>
                 <div class="page-indicator">
                     <input type="number" class="page-input" id="pageInput" value="1" min="1" onchange="goToPage(parseInt(this.value))">
                     <span class="page-total">/ <span id="totalPages">1</span></span>
@@ -632,19 +694,99 @@
         <div class="spinner"></div>
     </div>
 
+    <div class="cache-status" id="cacheStatus"></div>
+
     <script>
         let currentSubject = '';
         let currentChapter = '';
+        let currentFolder = '';
         let currentPage = 1;
         let totalPages = 0;
         let zoomLevel = 1;
         let chapterMeta = null;
         let chaptersData = null;
+        let imageCache = new Map();
+        let preloadQueue = [];
+
+        const pdfMap = {
+            physics: {
+                '01_Electric_Charges_and_Fields': '01_Electric_Charges_and_Fields.pdf',
+                '02_Electrostatic_Potential_and_Capacitance': '02_Electrostatic_Potential_and_Capacitance.pdf',
+                '03_Current_Electricity': '03_Current_Electricity.pdf',
+                '04_Moving_Charges_and_Magnetism': '04_Moving_Charges_and_Magnetism.pdf',
+                '05_Magnetism_and_Matter': '05_Magnetism_and_Matter.pdf',
+                '06_Electromagnetic_Induction': '06_Electromagnetic_Induction.pdf',
+                '07_Alternating_Current': '07_Alternating_Current.pdf',
+                '08_Electromagnetic_Waves': '08_Electromagnetic_Waves.pdf',
+                '09_Ray_Optics_and_Optical_Instruments': '09_Ray_Optics_and_Optical_Instruments.pdf',
+                '10_Wave_Optics': '10_Wave_Optics.pdf',
+                '11_Dual_Nature_of_Radiation_and_Matter': '11_Dual_Nature_of_Radiation_and_Matter.pdf',
+                '12_Atoms': '12_Atoms.pdf',
+                '13_Nuclei': '13_Nuclei.pdf',
+                '14_Semiconductor_Electronics': '14_Semiconductor_Electronics.pdf'
+            },
+            chemistry: {
+                '01_Solutions': '01_Solutions.pdf',
+                '02_Electrochemistry': '02_Electrochemistry.pdf',
+                '03_Chemical_Kinetics': '03_Chemical_Kinetics.pdf',
+                '04_d_and_f_Block_Elements': '04_d_and_f_Block_Elements.pdf',
+                '05_Coordination_Compounds': '05_Coordination_Compounds.pdf',
+                '06_Haloalkanes_and_Haloarenes': '06_Haloalkanes_and_Haloarenes.pdf',
+                '07_Alcohols_Phenols_and_Ethers': '07_Alcohols_Phenols_and_Ethers.pdf',
+                '08_Aldehydes_Ketones_and_Carboxylic_Acids': '08_Aldehydes_Ketones_and_Carboxylic_Acids.pdf',
+                '09_Amines': '09_Amines.pdf',
+                '10_Biomolecules': '10_Biomolecules.pdf'
+            }
+        };
+
+        function showCacheStatus(msg) {
+            const el = document.getElementById('cacheStatus');
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 2000);
+        }
+
+        function preloadImage(url) {
+            if (imageCache.has(url)) return Promise.resolve(imageCache.get(url));
+            
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    imageCache.set(url, img);
+                    resolve(img);
+                };
+                img.onerror = () => resolve(null);
+                img.src = url;
+            });
+        }
+
+        function preloadNearbyPages(centerPage, range = 3) {
+            if (!chapterMeta) return;
+            
+            const start = Math.max(0, centerPage - range - 1);
+            const end = Math.min(totalPages, centerPage + range);
+            
+            for (let i = start; i < end; i++) {
+                const pageInfo = chapterMeta.pages[i];
+                const url = `web_content/${currentSubject}/${currentFolder}/${pageInfo.file}`;
+                if (!imageCache.has(url)) {
+                    preloadImage(url);
+                }
+            }
+        }
 
         async function loadChapterIndex() {
             try {
-                const res = await fetch('web_content/index.json');
-                chaptersData = await res.json();
+                const cacheKey = 'chapters_index';
+                const cached = sessionStorage.getItem(cacheKey);
+                
+                if (cached) {
+                    chaptersData = JSON.parse(cached);
+                } else {
+                    const res = await fetch('web_content/index.json');
+                    chaptersData = await res.json();
+                    sessionStorage.setItem(cacheKey, JSON.stringify(chaptersData));
+                }
                 
                 let physicsTotal = 0, chemistryTotal = 0;
                 chaptersData.physics.forEach(ch => physicsTotal += ch.pages);
@@ -669,10 +811,28 @@
                     <div class="chapter-number">${String(i + 1).padStart(2, '0')}</div>
                     <div class="chapter-info">
                         <div class="chapter-title">${ch.title.replace(/_/g, ' ')}</div>
-                        <div class="chapter-pages">${ch.pages} pages</div>
+                        <div class="chapter-meta">
+                            <span class="chapter-pages">${ch.pages} pages</span>
+                            <button class="download-btn" onclick="event.stopPropagation(); downloadChapterPdf('${subject}', '${ch.folder}')">PDF</button>
+                        </div>
                     </div>
                 </div>
             `).join('');
+        }
+
+        function downloadChapterPdf(subject, folder) {
+            const pdfFile = pdfMap[subject]?.[folder];
+            if (pdfFile) {
+                const link = document.createElement('a');
+                link.href = `pdfs/${subject}/${pdfFile}`;
+                link.download = pdfFile;
+                link.click();
+                showCacheStatus('Downloading PDF...');
+            }
+        }
+
+        function downloadPdf() {
+            downloadChapterPdf(currentSubject, currentFolder);
         }
 
         function switchTab(subject) {
@@ -685,13 +845,23 @@
         async function openChapter(subject, folder) {
             showLoading(true);
             currentSubject = subject;
+            currentFolder = folder;
             currentChapter = folder;
             currentPage = 1;
             zoomLevel = 1;
 
             try {
-                const res = await fetch(`web_content/${subject}/${folder}/meta.json`);
-                chapterMeta = await res.json();
+                const cacheKey = `meta_${subject}_${folder}`;
+                const cached = sessionStorage.getItem(cacheKey);
+                
+                if (cached) {
+                    chapterMeta = JSON.parse(cached);
+                } else {
+                    const res = await fetch(`web_content/${subject}/${folder}/meta.json`);
+                    chapterMeta = await res.json();
+                    sessionStorage.setItem(cacheKey, JSON.stringify(chapterMeta));
+                }
+                
                 totalPages = chapterMeta.total_pages;
 
                 document.getElementById('readerTitle').textContent = chapterMeta.title.replace(/_/g, ' ');
@@ -702,6 +872,7 @@
 
                 renderPages();
                 renderThumbnails();
+                preloadNearbyPages(1, 5);
                 
                 document.getElementById('reader').classList.add('active');
                 document.body.style.overflow = 'hidden';
@@ -733,12 +904,23 @@
                 img.loading = 'lazy';
                 img.decoding = 'async';
                 img.alt = `Page ${i + 1}`;
+                
+                const imgUrl = `web_content/${currentSubject}/${currentFolder}/${pageInfo.file}`;
+                
                 img.onload = function() {
                     this.classList.add('loaded');
                     skeleton.remove();
                     container.style.aspectRatio = '';
+                    imageCache.set(imgUrl, this);
                 };
-                img.src = `web_content/${currentSubject}/${currentChapter}/${pageInfo.file}`;
+                
+                if (imageCache.has(imgUrl)) {
+                    img.src = imgUrl;
+                    img.classList.add('loaded');
+                    skeleton.style.display = 'none';
+                } else {
+                    img.src = imgUrl;
+                }
 
                 const label = document.createElement('div');
                 label.className = 'page-label';
@@ -759,6 +941,7 @@
                             document.getElementById('pageInput').value = pageNum;
                             updateProgress();
                             updateActiveThumbnail();
+                            preloadNearbyPages(pageNum, 3);
                         }
                     }
                 });
@@ -787,7 +970,7 @@
                 const img = document.createElement('img');
                 img.className = 'thumb' + (i === 0 ? ' active' : '');
                 img.loading = 'lazy';
-                img.src = `web_content/${currentSubject}/${currentChapter}/${pageInfo.file}`;
+                img.src = `web_content/${currentSubject}/${currentFolder}/${pageInfo.file}`;
                 img.onclick = () => goToPage(i + 1);
                 panel.appendChild(img);
             }
@@ -811,6 +994,7 @@
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
             updateActiveThumbnail();
+            preloadNearbyPages(page, 3);
         }
 
         function zoom(delta) {
@@ -845,14 +1029,14 @@
             if (e.key === '-') zoom(-0.1);
             if (e.key === 'Home') { e.preventDefault(); goToPage(1); }
             if (e.key === 'End') { e.preventDefault(); goToPage(totalPages); }
+            if (e.key === 'd' || e.key === 'D') downloadPdf();
         });
 
-        let touchStartX = 0;
-        document.getElementById('readerBody').addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-        }, { passive: true });
-
         loadChapterIndex();
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
     </script>
 </body>
 </html>
