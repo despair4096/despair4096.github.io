@@ -1,0 +1,89 @@
+{
+  "subject": "physics",
+  "chapters": [
+    {
+      "id": "01_Electric_Charges_and_Fields",
+      "title": "01 Electric Charges and Fields",
+      "pages": 190,
+      "folder": "01_Electric_Charges_and_Fields"
+    },
+    {
+      "id": "02_Electrostatic_Potential_and_Capacitance",
+      "title": "02 Electrostatic Potential and Capacitance",
+      "pages": 242,
+      "folder": "02_Electrostatic_Potential_and_Capacitance"
+    },
+    {
+      "id": "03_Current_Electricity",
+      "title": "03 Current Electricity",
+      "pages": 197,
+      "folder": "03_Current_Electricity"
+    },
+    {
+      "id": "04_Moving_Charges_and_Magnetism",
+      "title": "04 Moving Charges and Magnetism",
+      "pages": 191,
+      "folder": "04_Moving_Charges_and_Magnetism"
+    },
+    {
+      "id": "05_Magnetism_and_Matter",
+      "title": "05 Magnetism and Matter",
+      "pages": 79,
+      "folder": "05_Magnetism_and_Matter"
+    },
+    {
+      "id": "06_Electromagnetic_Induction",
+      "title": "06 Electromagnetic Induction",
+      "pages": 108,
+      "folder": "06_Electromagnetic_Induction"
+    },
+    {
+      "id": "07_Alternating_Current",
+      "title": "07 Alternating Current",
+      "pages": 79,
+      "folder": "07_Alternating_Current"
+    },
+    {
+      "id": "08_Electromagnetic_Waves",
+      "title": "08 Electromagnetic Waves",
+      "pages": 63,
+      "folder": "08_Electromagnetic_Waves"
+    },
+    {
+      "id": "09_Ray_Optics_and_Optical_Instruments",
+      "title": "09 Ray Optics and Optical Instruments",
+      "pages": 189,
+      "folder": "09_Ray_Optics_and_Optical_Instruments"
+    },
+    {
+      "id": "10_Wave_Optics",
+      "title": "10 Wave Optics",
+      "pages": 82,
+      "folder": "10_Wave_Optics"
+    },
+    {
+      "id": "11_Dual_Nature_of_Radiation_and_Matter",
+      "title": "11 Dual Nature of Radiation and Matter",
+      "pages": 49,
+      "folder": "11_Dual_Nature_of_Radiation_and_Matter"
+    },
+    {
+      "id": "12_Atoms",
+      "title": "12 Atoms",
+      "pages": 25,
+      "folder": "12_Atoms"
+    },
+    {
+      "id": "13_Nuclei",
+      "title": "13 Nuclei",
+      "pages": 49,
+      "folder": "13_Nuclei"
+    },
+    {
+      "id": "14_Semiconductor_Electronics",
+      "title": "14 Semiconductor Electronics",
+      "pages": 123,
+      "folder": "14_Semiconductor_Electronics"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "subject": "chemistry",
+  "chapters": [
+    {
+      "id": "01_Solutions",
+      "title": "01 Solutions",
+      "pages": 497,
+      "folder": "01_Solutions"
+    },
+    {
+      "id": "02_Electrochemistry",
+      "title": "02 Electrochemistry",
+      "pages": 456,
+      "folder": "02_Electrochemistry"
+    },
+    {
+      "id": "03_Chemical_Kinetics",
+      "title": "03 Chemical Kinetics",
+      "pages": 245,
+      "folder": "03_Chemical_Kinetics"
+    },
+    {
+      "id": "04_d_and_f_Block_Elements",
+      "title": "04 d and f Block Elements",
+      "pages": 446,
+      "folder": "04_d_and_f_Block_Elements"
+    },
+    {
+      "id": "05_Coordination_Compounds",
+      "title": "05 Coordination Compounds",
+      "pages": 329,
+      "folder": "05_Coordination_Compounds"
+    },
+    {
+      "id": "06_Haloalkanes_and_Haloarenes",
+      "title": "06 Haloalkanes and Haloarenes",
+      "pages": 314,
+      "folder": "06_Haloalkanes_and_Haloarenes"
+    },
+    {
+      "id": "07_Alcohols_Phenols_and_Ethers",
+      "title": "07 Alcohols Phenols and Ethers",
+      "pages": 275,
+      "folder": "07_Alcohols_Phenols_and_Ethers"
+    },
+    {
+      "id": "08_Aldehydes_Ketones_and_Carboxylic_Acids",
+      "title": "08 Aldehydes Ketones and Carboxylic Acids",
+      "pages": 215,
+      "folder": "08_Aldehydes_Ketones_and_Carboxylic_Acids"
+    },
+    {
+      "id": "09_Amines",
+      "title": "09 Amines",
+      "pages": 106,
+      "folder": "09_Amines"
+    },
+    {
+      "id": "10_Biomolecules",
+      "title": "10 Biomolecules",
+      "pages": 173,
+      "folder": "10_Biomolecules"
+    }
+  ]
+}
