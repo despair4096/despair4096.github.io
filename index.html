@@ -390,10 +390,21 @@
             z-index: 99;
             cursor: pointer;
             display: none;
+            touch-action: pan-y;
+            -webkit-tap-highlight-color: transparent;
+            pointer-events: none;
         }
 
         .reader.active .click-zone {
             display: block;
+            pointer-events: auto;
+        }
+
+        @media (pointer: coarse) {
+            /* On touch devices, disable click zones - use button nav instead */
+            .reader.active .click-zone {
+                display: none;
+            }
         }
 
         .click-zone.left {
@@ -481,8 +492,8 @@
     </div>
 
     <div class="reader" id="reader">
-        <div class="click-zone left" onclick="go(-1)"><span class="click-zone-icon">◀</span></div>
-        <div class="click-zone right" onclick="go(1)"><span class="click-zone-icon">▶</span></div>
+        <div class="click-zone left" id="zoneLeft"><span class="click-zone-icon">◀</span></div>
+        <div class="click-zone right" id="zoneRight"><span class="click-zone-icon">▶</span></div>
         <div class="reader-head">
             <span class="reader-title" id="rTitle">Chapter</span>
             <div class="nav-btns">
@@ -682,6 +693,43 @@
             if (e.key === 'ArrowLeft') go(-1);
             if (e.key === 'ArrowRight') go(1);
         });
+
+        // Touch handling for click zones - allow scroll, detect taps
+        (function() {
+            var touchStartY = 0;
+            var touchStartTime = 0;
+            var moved = false;
+
+            function setupZone(el, dir) {
+                el.addEventListener('touchstart', function(e) {
+                    touchStartY = e.touches[0].clientY;
+                    touchStartTime = Date.now();
+                    moved = false;
+                }, { passive: true });
+
+                el.addEventListener('touchmove', function(e) {
+                    var dy = Math.abs(e.touches[0].clientY - touchStartY);
+                    if (dy > 10) moved = true;
+                }, { passive: true });
+
+                el.addEventListener('touchend', function(e) {
+                    var elapsed = Date.now() - touchStartTime;
+                    if (!moved && elapsed < 300) {
+                        go(dir);
+                    }
+                }, { passive: true });
+
+                el.addEventListener('click', function(e) {
+                    // Desktop click
+                    if (e.pointerType !== 'touch') {
+                        go(dir);
+                    }
+                });
+            }
+
+            setupZone(document.getElementById('zoneLeft'), -1);
+            setupZone(document.getElementById('zoneRight'), 1);
+        })();
 
         load();
     </script>
