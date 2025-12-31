@@ -393,8 +393,8 @@
         }
 
         .pages-container {
-            transition: transform 0.1s ease-out;
-            transform-origin: top center;
+            width: 100%;
+            transition: max-width 0.15s ease-out;
         }
 
         .page-wrap {
@@ -600,7 +600,9 @@
     <script>
         var subj = '', folder = '', page = 1, total = 0, meta = null, data = null;
         var zoomLevel = 100;
-        var ZOOM_MIN = 50, ZOOM_MAX = 200, ZOOM_STEP = 25;
+        var ZOOM_MIN = 50, ZOOM_MAX = 300, ZOOM_STEP = 25;
+        var userHasScrolled = false;
+        var initialPage = 1;
 
         // LocalStorage helpers
         function getProgress() {
@@ -757,6 +759,7 @@
             subj = s;
             folder = f;
             zoomLevel = 100;
+            userHasScrolled = false;
             document.getElementById('zoomLvl').textContent = '100%';
 
             fetch('web_content/' + s + '/' + f + '/meta.json')
@@ -766,6 +769,7 @@
                     total = m.total_pages;
                     var savedPage = getLastPage(s, f);
                     page = Math.min(savedPage, total);
+                    initialPage = page;
                     document.getElementById('rTitle').textContent = m.title.replace(/_/g, ' ');
                     document.getElementById('pTot').textContent = total;
                     document.getElementById('pInp').value = page;
@@ -810,7 +814,13 @@
                         if (n !== page) {
                             page = n;
                             document.getElementById('pInp').value = n;
-                            saveProgress(subj, folder, page, total);
+                            // Only save if user has scrolled away from initial position
+                            if (n !== initialPage) {
+                                userHasScrolled = true;
+                            }
+                            if (userHasScrolled) {
+                                saveProgress(subj, folder, page, total);
+                            }
                         }
                         break;
                     }
@@ -829,8 +839,10 @@
         function applyZoom() {
             var container = document.getElementById('pagesContainer');
             if (container) {
-                container.style.transform = 'scale(' + (zoomLevel / 100) + ')';
-                container.style.width = (100 / (zoomLevel / 100)) + '%';
+                // Use max-width for proper zoom that works with scrolling
+                var maxW = Math.round(700 * (zoomLevel / 100));
+                container.style.maxWidth = maxW + 'px';
+                container.style.margin = '0 auto';
             }
         }
 
@@ -846,8 +858,8 @@
         }
 
         function close_() {
-            // Save final progress
-            if (subj && folder && total > 0) {
+            // Save final progress only if user actually scrolled
+            if (subj && folder && total > 0 && userHasScrolled) {
                 saveProgress(subj, folder, page, total);
             }
             document.getElementById('reader').classList.remove('active');
