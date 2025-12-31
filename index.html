@@ -199,6 +199,54 @@
             color: #666;
         }
 
+        .card-check {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .card-check.checked {
+            background: #22c55e;
+            border-color: #22c55e;
+        }
+
+        .card-check.checked::after {
+            content: '✓';
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .card.completed {
+            opacity: 0.6;
+        }
+
+        .card.completed .card-title {
+            text-decoration: line-through;
+            color: #666;
+        }
+
+        .progress-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(59,130,246,0.2);
+            color: #3b82f6;
+        }
+
+        .chemistry .progress-badge {
+            background: rgba(239,68,68,0.2);
+            color: #ef4444;
+        }
+
         .pdf-btn {
             background: rgba(59,130,246,0.2);
             color: #3b82f6;
@@ -252,21 +300,24 @@
 
         .nav-btns {
             display: flex;
-            gap: 5px;
+            gap: 4px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
         }
 
         .nav-btn {
             background: #2a2a35;
             border: none;
             color: #fff;
-            width: 34px;
-            height: 34px;
+            width: 32px;
+            height: 32px;
             border-radius: 6px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
         .nav-btn:active {
@@ -280,6 +331,31 @@
         .nav-btn.dl {
             background: #3b82f6;
             font-size: 0.8rem;
+        }
+
+        .nav-btn.zoom {
+            background: #2a2a35;
+            font-size: 0.9rem;
+        }
+
+        .zoom-level {
+            font-size: 0.7rem;
+            color: #888;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        @media (max-width: 400px) {
+            .zoom-level {
+                display: none;
+            }
+            .nav-btn {
+                width: 36px;
+                height: 36px;
+            }
+            .reader-title {
+                display: none;
+            }
         }
 
         .page-info {
@@ -309,11 +385,16 @@
         .reader-body {
             flex: 1;
             overflow-y: auto;
-            overflow-x: hidden;
+            overflow-x: auto;
             padding: 10px;
             -webkit-overflow-scrolling: touch;
             overscroll-behavior: contain;
-            touch-action: pan-y;
+            touch-action: manipulation;
+        }
+
+        .pages-container {
+            transition: transform 0.1s ease-out;
+            transform-origin: top center;
         }
 
         .page-wrap {
@@ -503,6 +584,9 @@
                     <span>/ <span id="pTot">1</span></span>
                 </div>
                 <button class="nav-btn" onclick="go(1)">▶</button>
+                <button class="nav-btn zoom" onclick="zoom(-1)">−</button>
+                <span class="zoom-level" id="zoomLvl">100%</span>
+                <button class="nav-btn zoom" onclick="zoom(1)">+</button>
                 <button class="nav-btn dl" onclick="dl()">↓</button>
                 <button class="nav-btn close" onclick="closeWithHistory()">✕</button>
             </div>
@@ -515,6 +599,53 @@
 
     <script>
         var subj = '', folder = '', page = 1, total = 0, meta = null, data = null;
+        var zoomLevel = 100;
+        var ZOOM_MIN = 50, ZOOM_MAX = 200, ZOOM_STEP = 25;
+
+        // LocalStorage helpers
+        function getProgress() {
+            try {
+                return JSON.parse(localStorage.getItem('cbse_progress') || '{}');
+            } catch (e) { return {}; }
+        }
+
+        function saveProgress(s, f, pg, tot) {
+            var prog = getProgress();
+            if (!prog[s]) prog[s] = {};
+            prog[s][f] = { page: pg, total: tot, lastRead: Date.now() };
+            localStorage.setItem('cbse_progress', JSON.stringify(prog));
+        }
+
+        function getChecklist() {
+            try {
+                return JSON.parse(localStorage.getItem('cbse_checklist') || '{}');
+            } catch (e) { return {}; }
+        }
+
+        function saveChecklist(s, f, done) {
+            var list = getChecklist();
+            if (!list[s]) list[s] = {};
+            list[s][f] = done;
+            localStorage.setItem('cbse_checklist', JSON.stringify(list));
+        }
+
+        function isCompleted(s, f) {
+            var list = getChecklist();
+            return list[s] && list[s][f];
+        }
+
+        function getLastPage(s, f) {
+            var prog = getProgress();
+            return prog[s] && prog[s][f] ? prog[s][f].page : 1;
+        }
+
+        function getReadPercent(s, f) {
+            var prog = getProgress();
+            if (prog[s] && prog[s][f]) {
+                return Math.round((prog[s][f].page / prog[s][f].total) * 100);
+            }
+            return 0;
+        }
 
         var pdfs = {
             physics: {
@@ -569,15 +700,35 @@
             var html = '';
             for (var i = 0; i < chapters.length; i++) {
                 var c = chapters[i];
-                html += '<div class="card" onclick="open_(\'' + s + '\',\'' + c.folder + '\')">' +
+                var done = isCompleted(s, c.folder);
+                var pct = getReadPercent(s, c.folder);
+                html += '<div class="card' + (done ? ' completed' : '') + '" data-subj="' + s + '" data-folder="' + c.folder + '">' +
+                    '<div class="card-check' + (done ? ' checked' : '') + '" onclick="event.stopPropagation();toggleCheck(\'' + s + '\',\'' + c.folder + '\',this)"></div>' +
                     '<div class="num">' + String(i + 1).padStart(2, '0') + '</div>' +
-                    '<div class="card-info">' +
+                    '<div class="card-info" onclick="open_(\'' + s + '\',\'' + c.folder + '\')">' +
                     '<div class="card-title">' + c.title.replace(/_/g, ' ') + '</div>' +
                     '<div class="card-meta">' +
                     '<span class="pages">' + c.pages + ' pages</span>' +
+                    (pct > 0 ? '<span class="progress-badge">' + pct + '% read</span>' : '') +
                     '</div></div></div>';
             }
             g.innerHTML = html;
+        }
+
+        function toggleCheck(s, f, el) {
+            var done = !el.classList.contains('checked');
+            el.classList.toggle('checked', done);
+            el.closest('.card').classList.toggle('completed', done);
+            saveChecklist(s, f, done);
+            updateStats();
+        }
+
+        function updateStats() {
+            var list = getChecklist();
+            var pDone = 0, cDone = 0;
+            if (list.physics) pDone = Object.values(list.physics).filter(Boolean).length;
+            if (list.chemistry) cDone = Object.values(list.chemistry).filter(Boolean).length;
+            // Could update UI here if needed
         }
 
         function switchTab(s) {
@@ -605,23 +756,30 @@
             document.getElementById('loader').classList.add('active');
             subj = s;
             folder = f;
-            page = 1;
+            zoomLevel = 100;
+            document.getElementById('zoomLvl').textContent = '100%';
 
             fetch('web_content/' + s + '/' + f + '/meta.json')
                 .then(function(r) { return r.json(); })
                 .then(function(m) {
                     meta = m;
                     total = m.total_pages;
+                    var savedPage = getLastPage(s, f);
+                    page = Math.min(savedPage, total);
                     document.getElementById('rTitle').textContent = m.title.replace(/_/g, ' ');
                     document.getElementById('pTot').textContent = total;
-                    document.getElementById('pInp').value = 1;
+                    document.getElementById('pInp').value = page;
                     document.getElementById('pInp').max = total;
-                    document.getElementById('prog').style.width = '0%';
+                    document.getElementById('prog').style.width = ((page - 1) / (total - 1) * 100) + '%';
                     renderPages();
                     document.getElementById('reader').classList.add('active');
                     document.body.classList.add('reader-open');
                     document.documentElement.classList.add('reader-open');
-                    document.getElementById('rBody').scrollTop = 0;
+                    // Scroll to saved page
+                    setTimeout(function() {
+                        var el = document.getElementById('p' + page);
+                        if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+                    }, 100);
                     document.getElementById('loader').classList.remove('active');
                     history.pushState({ reader: true }, '');
                 });
@@ -629,14 +787,16 @@
 
         function renderPages() {
             var body = document.getElementById('rBody');
-            var html = '';
+            var html = '<div class="pages-container" id="pagesContainer">';
             for (var i = 0; i < total; i++) {
                 var p = meta.pages[i];
                 html += '<div class="page-wrap" id="p' + (i + 1) + '">' +
                     '<img src="web_content/' + subj + '/' + folder + '/' + p.file + '" alt="Page ' + (i + 1) + '" loading="lazy">' +
                     '<div class="page-num">' + (i + 1) + '</div></div>';
             }
+            html += '</div>';
             body.innerHTML = html;
+            applyZoom();
 
             body.onscroll = function() {
                 var pct = (body.scrollTop / (body.scrollHeight - body.clientHeight)) * 100;
@@ -650,11 +810,28 @@
                         if (n !== page) {
                             page = n;
                             document.getElementById('pInp').value = n;
+                            saveProgress(subj, folder, page, total);
                         }
                         break;
                     }
                 }
             };
+        }
+
+        function zoom(dir) {
+            zoomLevel += dir * ZOOM_STEP;
+            if (zoomLevel < ZOOM_MIN) zoomLevel = ZOOM_MIN;
+            if (zoomLevel > ZOOM_MAX) zoomLevel = ZOOM_MAX;
+            document.getElementById('zoomLvl').textContent = zoomLevel + '%';
+            applyZoom();
+        }
+
+        function applyZoom() {
+            var container = document.getElementById('pagesContainer');
+            if (container) {
+                container.style.transform = 'scale(' + (zoomLevel / 100) + ')';
+                container.style.width = (100 / (zoomLevel / 100)) + '%';
+            }
         }
 
         function go(d, v) {
@@ -669,9 +846,18 @@
         }
 
         function close_() {
+            // Save final progress
+            if (subj && folder && total > 0) {
+                saveProgress(subj, folder, page, total);
+            }
             document.getElementById('reader').classList.remove('active');
             document.body.classList.remove('reader-open');
             document.documentElement.classList.remove('reader-open');
+            // Refresh cards to show updated progress
+            if (data) {
+                render('physics', data.physics);
+                render('chemistry', data.chemistry);
+            }
         }
 
         function closeWithHistory() {
